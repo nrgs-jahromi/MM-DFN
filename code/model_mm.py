@@ -169,7 +169,7 @@ class MM_GCN(nn.Module):
                         idx[0] += m_start
                         idx[1] += n_start
                         modal_weight = modal_weight
-                        adj[idx] = dia_sim * modal_weight
+                        adj[idx[0], idx[1]] = dia_sim * modal_weight
 
             start += dia_len[i]
 
