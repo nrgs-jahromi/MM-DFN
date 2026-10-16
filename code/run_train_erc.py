@@ -1,4 +1,6 @@
 import argparse
+import os
+import csv
 import numpy as np
 import datetime
 import random
@@ -548,6 +550,12 @@ if __name__ == '__main__':
         print(all_acc)
         exit(0)
 
+    os.makedirs(args.save_model_dir, exist_ok=True)
+    metrics_path = os.path.join(args.save_model_dir, "metrics.csv")
+    with open(metrics_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["epoch", "train_loss", "train_acc", "train_fscore", "valid_loss", "valid_acc", "valid_fscore", "test_loss", "test_acc", "test_fscore", "time_sec"])
+
     all_test_fscore, all_test_acc = [], []
     best_epoch, best_epoch2, patience, best_eval_fscore, best_eval_loss = -1, -1, 0, 0, None
     patience2 = 0
@@ -613,6 +621,13 @@ if __name__ == '__main__':
         if e == 0 or best_eval_fscore < eval_fscore:
             patience = 0
             best_epoch, best_eval_fscore = e, eval_fscore
+            torch.save({
+                "epoch": e + 1,
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "best_eval_fscore": best_eval_fscore,
+                "args": vars(args),
+            }, os.path.join(args.save_model_dir, "best_model.pt"))
         else:
             patience += 1
         if best_eval_loss is None:
@@ -625,10 +640,16 @@ if __name__ == '__main__':
             else:
                 patience2 += 1
 
+        epoch_time = round(time.time() - start_time, 2)
         print(
             'epoch: {}, train_loss: {}, train_acc: {}, train_fscore: {}, valid_loss: {}, valid_acc: {}, valid_fscore: {}, test_loss: {}, test_acc: {}, test_fscore: {}, time: {} sec'. \
                 format(e, train_loss, train_acc, train_fscore, valid_loss, valid_acc, valid_fscore, test_loss, test_acc, test_fscore,
-                       round(time.time() - start_time, 2)))
+                       epoch_time))
+
+        with open(metrics_path, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow([e + 1, train_loss, train_acc, train_fscore, valid_loss, valid_acc, valid_fscore, test_loss, test_acc, test_fscore, epoch_time])
+            f.flush()
 
         print(all_each)
         print(all_acc)
